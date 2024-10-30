@@ -168,8 +168,12 @@ use ratatui::text::Text;
 
 // Function to get preview of file content around the specific line using `bat`
 fn get_file_preview(file_path: &str, line_number: usize) -> Result<Text> {
-    let start_line = if line_number > 5 { line_number - 5 } else { 1 };
-    let end_line = line_number + 5;
+    let start_line = if line_number > 15 {
+        line_number - 15
+    } else {
+        1
+    };
+    let end_line = line_number + 15;
 
     // Use `bat` with color enabled
     let output = Command::new("bat")
