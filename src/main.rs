@@ -110,8 +110,7 @@ fn main() -> Result<()> {
 
     // Restore the terminal to its previous state
     restore_terminal()?;
-    execute!(stdout, LeaveAlternateScreen, Clear(ClearType::All))
-        .context("Failed to leave alternate screen")?;
+    execute!(stdout, LeaveAlternateScreen).context("Failed to leave alternate screen")?;
     Ok(())
 }
 
@@ -148,4 +147,3 @@ fn get_rg_matches() -> Result<Vec<RgMatch>> {
 
     Ok(matches)
 }
-
