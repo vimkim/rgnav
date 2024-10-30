@@ -15,31 +15,8 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
-use serde::Deserialize;
 use std::io::{self};
 use std::process::Command;
-
-#[derive(Debug, Deserialize)]
-struct RgMatch {
-    data: Option<MatchData>,
-}
-
-#[derive(Debug, Deserialize)]
-struct MatchData {
-    path: PathInfo,
-    lines: LineInfo,
-    line_number: usize, // Capture the line number of the match
-}
-
-#[derive(Debug, Deserialize)]
-struct PathInfo {
-    text: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct LineInfo {
-    text: String,
-}
 
 // Struct to ensure the terminal is restored on exit
 struct TerminalCleanup;
@@ -61,14 +38,13 @@ impl Drop for TerminalCleanup {
 
 fn main() -> Result<()> {
     // Initialize the TerminalCleanup struct to manage terminal state
-    let _cleanup = TerminalCleanup::new()?;
 
     // Enter alternate screen and enable raw mode
     enable_raw_mode().context("Failed to enable raw mode")?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen).context("Failed to enter alternate screen")?;
 
+    let _cleanup = TerminalCleanup::new()?;
     let rg_matches = get_rg_matches()?;
+
     let mut terminal = setup_terminal()?;
 
     let mut selected_idx = 0;
@@ -140,9 +116,6 @@ fn main() -> Result<()> {
         }
     }
 
-    // Restore the terminal to its previous state
-    restore_terminal()?;
-    execute!(stdout, LeaveAlternateScreen).context("Failed to leave alternate screen")?;
     Ok(())
 }
 
@@ -151,10 +124,6 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     let backend = CrosstermBackend::new(stdout);
     let terminal = Terminal::new(backend)?;
     Ok(terminal)
-}
-
-fn restore_terminal() -> Result<()> {
-    disable_raw_mode().context("Failed to disable raw mode")
 }
 
 // Function to create the list state with the selected index

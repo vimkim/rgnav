@@ -11,7 +11,6 @@ pub struct RgMatch {
 #[derive(Debug, Deserialize)]
 pub struct MatchData {
     pub path: PathInfo,
-    pub lines: LineInfo,
     pub line_number: usize,
 }
 
@@ -21,9 +20,7 @@ pub struct PathInfo {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LineInfo {
-    pub text: String,
-}
+pub struct LineInfo {}
 
 // Function to read ripgrep output from stdin
 pub fn get_rg_matches() -> Result<Vec<RgMatch>> {
