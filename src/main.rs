@@ -16,8 +16,8 @@ use ratatui::{
     Terminal,
 };
 use serde::Deserialize;
-use std::io::{self, BufRead};
-use std::process::{Command, Stdio};
+use std::io::{self};
+use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct RgMatch {
@@ -41,14 +41,35 @@ struct LineInfo {
     text: String,
 }
 
+// Struct to ensure the terminal is restored on exit
+struct TerminalCleanup;
+
+impl TerminalCleanup {
+    fn new() -> Result<Self> {
+        enable_raw_mode().context("Failed to enable raw mode")?;
+        execute!(io::stdout(), EnterAlternateScreen).context("Failed to enter alternate screen")?;
+        Ok(Self)
+    }
+}
+
+impl Drop for TerminalCleanup {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+    }
+}
+
 fn main() -> Result<()> {
+    // Initialize the TerminalCleanup struct to manage terminal state
+    let _cleanup = TerminalCleanup::new()?;
+
     // Enter alternate screen and enable raw mode
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen).context("Failed to enter alternate screen")?;
 
-    let mut terminal = setup_terminal()?;
     let rg_matches = get_rg_matches()?;
+    let mut terminal = setup_terminal()?;
 
     let mut selected_idx = 0;
     loop {

@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use atty::Stream;
 use serde::Deserialize;
 use std::io::{self, BufRead};
 
@@ -11,7 +12,7 @@ pub struct RgMatch {
 pub struct MatchData {
     pub path: PathInfo,
     pub lines: LineInfo,
-    pub line_number: usize, // Capture the line number of the match
+    pub line_number: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,6 +27,13 @@ pub struct LineInfo {
 
 // Function to read ripgrep output from stdin
 pub fn get_rg_matches() -> Result<Vec<RgMatch>> {
+    // Exit immediately if `stdin` is a terminal (not piped)
+    if atty::is(Stream::Stdin) {
+        return Err(anyhow::anyhow!(
+            "No piped input detected. Please pipe `rg` output to `rgnav`."
+        ));
+    }
+
     let stdin = io::stdin();
     let reader = stdin.lock();
 
