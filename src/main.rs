@@ -167,6 +167,9 @@ fn create_list_state(selected_idx: usize) -> ratatui::widgets::ListState {
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 
+// Maximum number of characters per line
+const MAX_LINE_LENGTH: usize = 80;
+
 // Function to get preview of file content around the specific line using `bat`
 fn get_file_preview(file_path: &str, line_number: usize) -> Result<Text> {
     let start_line = if line_number > 15 {
@@ -193,8 +196,17 @@ fn get_file_preview(file_path: &str, line_number: usize) -> Result<Text> {
         .context("Failed to execute bat")?;
 
     if output.status.success() {
-        // Convert ANSI escape sequences to `ratatui`-compatible Text
-        let preview_text = String::from_utf8_lossy(&output.stdout).into_owned(); // Convert to owned String
+        // Process each line to truncate it to the max length
+        let preview_text = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(|line| {
+                let mut truncated = line.to_string();
+                truncated.truncate(MAX_LINE_LENGTH); // Limit each line length
+                truncated
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
         preview_text
             .into_text()
             .map_err(|e| anyhow::anyhow!("Failed to parse ANSI: {}", e))
