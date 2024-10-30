@@ -1,3 +1,7 @@
+mod rg_matches;
+
+use rg_matches::get_rg_matches;
+
 use anyhow::{Context, Result};
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -137,30 +141,6 @@ fn create_list_state(selected_idx: usize) -> ratatui::widgets::ListState {
     let mut state = ratatui::widgets::ListState::default();
     state.select(Some(selected_idx));
     state
-}
-
-// Function to get rg search results
-fn get_rg_matches() -> Result<Vec<RgMatch>> {
-    let rg_command = Command::new("rg")
-        .args(["--json", "fn"]) // Customize search term
-        .stdout(Stdio::piped())
-        .spawn()
-        .context("Failed to start ripgrep")?;
-
-    let rg_output = rg_command
-        .stdout
-        .context("Failed to capture ripgrep output")?;
-    let rg_reader = io::BufReader::new(rg_output);
-
-    let mut matches = Vec::new();
-    for line in rg_reader.lines() {
-        let line = line.context("Failed to read line from ripgrep output")?;
-        if let Ok(rg_match) = serde_json::from_str::<RgMatch>(&line) {
-            matches.push(rg_match);
-        }
-    }
-
-    Ok(matches)
 }
 
 use ansi_to_tui::IntoText;
