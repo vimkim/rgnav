@@ -10,3 +10,4 @@ crossterm = "*"
 anyhow = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+ansi-to-tui = "*"

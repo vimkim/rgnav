@@ -24,6 +24,7 @@ struct RgMatch {
 struct MatchData {
     path: PathInfo,
     lines: LineInfo,
+    line_number: usize, // Capture the line number of the match
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,7 +83,11 @@ fn main() -> Result<()> {
             f.render_stateful_widget(list, chunks[0], &mut create_list_state(selected_idx));
 
             if let Some(data) = rg_matches.get(selected_idx).and_then(|m| m.data.as_ref()) {
-                let preview = Paragraph::new(data.lines.text.clone())
+                // Capture `bat` output for file preview with context around the match line
+                let preview_text = get_file_preview(&data.path.text, data.line_number)
+                    .unwrap_or_else(|_| "Error loading preview".into());
+
+                let preview = Paragraph::new(preview_text)
                     .block(Block::default().borders(Borders::ALL).title("Code Preview"));
                 f.render_widget(preview, chunks[1]);
             }
@@ -134,6 +139,7 @@ fn create_list_state(selected_idx: usize) -> ratatui::widgets::ListState {
     state
 }
 
+// Function to get rg search results
 fn get_rg_matches() -> Result<Vec<RgMatch>> {
     let rg_command = Command::new("rg")
         .args(["--json", "fn"]) // Customize search term
@@ -157,3 +163,40 @@ fn get_rg_matches() -> Result<Vec<RgMatch>> {
     Ok(matches)
 }
 
+use ansi_to_tui::IntoText;
+use ratatui::text::Text;
+
+// Function to get preview of file content around the specific line using `bat`
+fn get_file_preview(file_path: &str, line_number: usize) -> Result<Text> {
+    let start_line = if line_number > 5 { line_number - 5 } else { 1 };
+    let end_line = line_number + 5;
+
+    // Use `bat` with color enabled
+    let output = Command::new("bat")
+        .args([
+            "--style",
+            "plain",
+            "--paging",
+            "never",
+            "--color",
+            "always", // Enable color for ANSI escape sequences
+            "--line-range",
+            &format!("{}:{}", start_line, end_line), // Context range around the match
+            file_path,
+        ])
+        .output()
+        .context("Failed to execute bat")?;
+
+    if output.status.success() {
+        // Convert ANSI escape sequences to `ratatui`-compatible Text
+        let preview_text = String::from_utf8_lossy(&output.stdout).into_owned(); // Convert to owned String
+        preview_text
+            .into_text()
+            .map_err(|e| anyhow::anyhow!("Failed to parse ANSI: {}", e))
+    } else {
+        Err(anyhow::anyhow!(
+            "Error running bat: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ))
+    }
+}
