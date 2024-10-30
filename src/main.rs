@@ -2,15 +2,12 @@ use anyhow::{Context, Result};
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Terminal,
 };
@@ -43,8 +40,7 @@ fn main() -> Result<()> {
     // Enter alternate screen and enable raw mode
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, Clear(ClearType::All))
-        .context("Failed to enter alternate screen")?;
+    execute!(stdout, EnterAlternateScreen).context("Failed to enter alternate screen")?;
 
     let mut terminal = setup_terminal()?;
     let rg_matches = get_rg_matches()?;
@@ -56,6 +52,12 @@ fn main() -> Result<()> {
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
                 .split(f.area());
+
+            // Define highlight style for the selected item
+            let highlight_style = Style::default()
+                .bg(Color::Blue)
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD);
 
             let items: Vec<ListItem> = rg_matches
                 .iter()
@@ -75,9 +77,9 @@ fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .title("Search Results"),
                 )
-                .highlight_style(Style::default().bg(Color::LightGreen));
+                .highlight_style(highlight_style); // Apply highlight style
 
-            f.render_widget(list, chunks[0]);
+            f.render_stateful_widget(list, chunks[0], &mut create_list_state(selected_idx));
 
             if let Some(data) = rg_matches.get(selected_idx).and_then(|m| m.data.as_ref()) {
                 let preview = Paragraph::new(data.lines.text.clone())
@@ -125,6 +127,13 @@ fn restore_terminal() -> Result<()> {
     disable_raw_mode().context("Failed to disable raw mode")
 }
 
+// Function to create the list state with the selected index
+fn create_list_state(selected_idx: usize) -> ratatui::widgets::ListState {
+    let mut state = ratatui::widgets::ListState::default();
+    state.select(Some(selected_idx));
+    state
+}
+
 fn get_rg_matches() -> Result<Vec<RgMatch>> {
     let rg_command = Command::new("rg")
         .args(["--json", "fn"]) // Customize search term
@@ -147,3 +156,4 @@ fn get_rg_matches() -> Result<Vec<RgMatch>> {
 
     Ok(matches)
 }
+
